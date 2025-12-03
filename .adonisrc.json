@@ -1,0 +1,36 @@
+/*
+|--------------------------------------------------------------------------
+| Application Commands
+|--------------------------------------------------------------------------
+*/
+
+import './commands'
+
+/*
+|--------------------------------------------------------------------------
+| Preloaded File
+|--------------------------------------------------------------------------
+*/
+
+export const rcFile = {
+  commands: [
+    './commands',
+    '@adonisjs/core/build/commands/index.js',
+    '@adonisjs/repl/build/commands',
+  ],
+  providers: [
+    './providers/AppProvider',
+    '@adonisjs/core',
+    '@adonisjs/repl',
+  ],
+  aliases: {},
+  tests: {
+    suites: [
+      {
+        name: 'functional',
+        files: ['tests/**/*.spec.ts'],
+        timeout: 30000,
+      },
+    ],
+  },
+}

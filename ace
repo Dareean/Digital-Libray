@@ -1,0 +1,5 @@
+#!/usr/bin/env node
+
+require('@adonisjs/core/build/standalone').Ignitor
+  .ace()
+  .main()

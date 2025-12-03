@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>  - Digital Library</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>📚 Digital Library</h1>
+                <p class="subtitle">Manage your book collection with ease</p>
+            </div>
+            <div class="auth-section">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">👤</div>
+                    <div class="user-details">
+                        <div class="user-name" id="userName">User</div>
+                        <div class="user-role" id="userRole">Role</div>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="handleLogout()">🚪 Logout</button>
+            </div>
+        </header>
+
+        <!-- Stats Dashboard -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📖</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="totalBooks">0</div>
+                    <div class="stat-label">Total Books</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👤</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="myBooks">0</div>
+                    <div class="stat-label">My Books</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🌐</div>
+                <div class="stat-info">
+                    <div class="stat-value" id="apiStatus">Checking...</div>
+                    <div class="stat-label">API Status</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Left Sidebar - Actions -->
+            <aside class="sidebar">
+                <div class="action-section">
+                    <h3>Actions</h3>
+                    <button class="btn btn-primary btn-block" onclick="showCreateModal()">
+                        ➕ Add New Book
+                    </button>
+                    <button class="btn btn-secondary btn-block" onclick="loadBooks()">
+                        🔄 Refresh List
+                    </button>
+                    <button class="btn btn-secondary btn-block" onclick="showSearchModal()">
+                        🔍 Search External APIs
+                    </button>
+                    <button class="btn btn-secondary btn-block" onclick="checkHealth()">
+                        ❤️ Check API Health
+                    </button>
+                </div>
+
+                <div class="user-permissions" id="permissionsBox">
+                    <h4>Your Permissions</h4>
+                    <div class="permission-list" id="permissionsList"></div>
+                </div>
+            </aside>
+
+            <!-- Main Area - Books List -->
+            <main class="content">
+                <div class="content-header">
+                    <h2>Book Collection</h2>
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="Search books..." onkeyup="filterBooks()">
+                    </div>
+                </div>
+
+                <div id="booksList" class="books-grid">
+                    <!-- Books will be loaded here -->
+                </div>
+
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <div class="empty-icon">📚</div>
+                    <h3>No books found</h3>
+                    <p>Start by adding your first book</p>
+                    <button class="btn btn-primary" onclick="showCreateModal()">Add Book</button>
+                </div>
+            </main>
+        </div>
+
+        <!-- Notification Toast -->
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <!-- Create/Edit Book Modal -->
+    <div id="bookModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add New Book</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="bookForm" onsubmit="handleBookSubmit(event)">
+                    <input type="hidden" id="bookId">
+                    
+                    <div class="form-group">
+                        <label for="coverImage">Book Cover Image (URL)</label>
+                        <input type="url" id="coverImage" placeholder="https://example.com/cover.jpg">
+                        <small style="color: var(--text-muted); font-size: 0.75rem;">Paste image URL or leave empty for default</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="title">Title *</label>
+                        <input type="text" id="title" required placeholder="Enter book title">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="authors">Authors * (comma-separated)</label>
+                        <input type="text" id="authors" required placeholder="e.g., F. Scott Fitzgerald, Ernest Hemingway">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="year">Publication Year *</label>
+                        <input type="number" id="year" required min="1000" max="2025" placeholder="e.g., 1925">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" rows="3" placeholder="Brief description of the book"></textarea>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Book</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search External APIs Modal -->
+    <div id="searchModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3>Search External APIs</h3>
+                <button class="close-btn" onclick="closeSearchModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="search-tabs">
+                    <button class="tab-btn active" onclick="switchSearchTab('openlibrary')">Open Library</button>
+                    <button class="tab-btn" onclick="switchSearchTab('gutendex')">Gutendex</button>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="externalSearchInput" placeholder="Search books..." onkeypress="handleSearchKeypress(event)">
+                    <button class="btn btn-primary" onclick="searchExternal()">Search</button>
+                </div>
+                <div id="searchResults" class="search-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
