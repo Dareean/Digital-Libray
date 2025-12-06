@@ -6,6 +6,7 @@ const USER_TOKEN = "token-limited-123";
 const AUTH_STORAGE_KEY = "digital-library-auth";
 const LAST_READ_STORAGE_KEY = "digital-library-last-read";
 const HISTORY_STORAGE_KEY = "digital-library-history";
+const LANGUAGE_STORAGE_KEY = "digital-library-language";
 const MINIMUM_LIBRARY_SIZE = 25;
 const DEFAULT_ADMIN = {
   name: "Administrator",
@@ -39,6 +40,14 @@ const emptyUserAdminForm = {
   email: "",
   password: "",
   role: "User",
+};
+
+const emptyRequestForm = {
+  title: "",
+  authors: "",
+  externalLink: "",
+  reason: "",
+  notes: "",
 };
 
 const endpointCatalog = [
@@ -83,6 +92,613 @@ const availabilityBadgeClasses = (status) => {
     return "bg-neutral-100 text-neutral-500 ring-neutral-200/70 dark:bg-neutral-900/40 dark:text-neutral-300 dark:ring-neutral-700/60";
   }
   return "bg-neutral-200 text-neutral-700 ring-neutral-400/50 dark:bg-neutral-800 dark:text-neutral-200 dark:ring-neutral-600/40";
+};
+
+const requestStatusClasses = (status) => {
+  if (status === "approved") {
+    return "bg-emerald-100 text-emerald-700 ring-emerald-400/40 dark:bg-emerald-900/30 dark:text-emerald-200";
+  }
+  if (status === "rejected") {
+    return "bg-rose-100 text-rose-700 ring-rose-400/40 dark:bg-rose-900/30 dark:text-rose-200";
+  }
+  return "bg-amber-100 text-amber-700 ring-amber-400/30 dark:bg-amber-900/30 dark:text-amber-200";
+};
+
+const LANGUAGE_OPTIONS = [
+  { value: "id", label: "Bahasa Indonesia" },
+  { value: "en", label: "English" },
+];
+
+const translations = {
+  id: {
+    nav: {
+      dashboard: "Dashboard",
+      users: "Pengguna",
+      books: "Buku",
+      history: "Riwayat",
+      requests: "Permintaan",
+    },
+    header: {
+      brand: "Perpustakaan Digital",
+      title: "Dasbor Monokrom",
+      defaultCredentialHint: "Admin default · admin@library.local / admin123",
+      refresh: "Segarkan",
+      languageToggle: "",
+      searchApi: "Cari API",
+      editProfile: "Ubah Profil",
+      logout: "Keluar",
+    },
+    hero: {
+      kicker: "Perpustakaan Digital",
+      heading: "Arsip monokrom untuk membaca tanpa distraksi.",
+      body: "Masuk sebagai admin untuk mengkurasi koleksi dan akun, atau sebagai user untuk fokus membaca serta melacak riwayat.",
+      statSlots: "Slot koleksi siap isi",
+      statRoles: "Dashboard Admin & User",
+      authLoginTitle: "Masuk",
+      authLoginDesc: "Gunakan kredensial admin/user yang tersedia.",
+      authRegisterTitle: "Buat akun",
+      authRegisterDesc: "Daftarkan user baru dengan akses dasar.",
+      nameLabel: "Nama lengkap",
+      emailLabel: "Email",
+      passwordLabel: "Kata sandi",
+      namePlaceholder: "Jane Doe",
+      emailPlaceholder: "kamu@example.com",
+      passwordPlaceholder: "••••••••",
+      loginButton: "Masuk",
+      registerButton: "Daftar",
+    },
+    profile: {
+      collectionLabel: "Koleksi aktif",
+      historyLabel: "Riwayat",
+      syncButton: "Sinkronkan buku",
+    },
+    dashboardCommon: {
+      snapshot: "Snapshot per",
+      bookStatus: "Status Buku",
+      lastBook: "Bacaan Terakhir",
+      continue: "Lanjutkan Membaca",
+      unavailable: "Buku tidak tersedia lagi.",
+      readingProgress: "Progres Membaca",
+      progressHelper: "Tren 6 minggu",
+      topAuthors: "Penulis Teratas",
+      emptyAuthors: "Belum ada penulis favorit.",
+    },
+    adminDashboard: {
+      cards: {
+        totalBooks: { title: "Total Buku", helper: "Sinkron terakhir" },
+        uniqueAuthors: { title: "Penulis Unik", helper: "Katalog terkurasi" },
+        userAccounts: {
+          title: "Akun Pengguna",
+          helper: (admins, members) => `Admin: ${admins} · Member: ${members}`,
+        },
+        serverStatus: { title: "Status Server" },
+      },
+      actionsTitle: "Aksi",
+      actions: {
+        addBook: "Tambah Buku",
+        refreshList: "Segarkan Daftar",
+        searchExternal: "Cari API Eksternal",
+        checkHealth: "Cek API Health",
+      },
+      permissionsTitle: "Hak Akses",
+      apiSurfaceTitle: "Endpoint API",
+      overviewTitle: "Ringkasan Membaca",
+      curatorSpotlight: "Sorotan Kurator",
+      spotlightEmpty: "Tambah buku untuk rekomendasi personal.",
+    },
+    userDashboard: {
+      totalBooksHelper: "Terakhir diperbarui",
+      uniqueAuthorsHelper: "Cakupan koleksi",
+      readingActivity: "Aktivitas Membaca",
+      readingActivityHelper: "Riwayat menghitung setiap detail buku",
+      historyEmpty: "Belum ada catatan bacaan.",
+    },
+    history: {
+      title: "Riwayat Bacaan",
+      description: "Catatan otomatis saat kamu membuka detail buku.",
+      entryCount: (count) => `${count} entri`,
+      clear: "Bersihkan Riwayat",
+      emptyTitle: "Belum ada riwayat",
+      emptyBody:
+        "Buka detail buku apa pun dan riwayatmu akan tersimpan otomatis di sini.",
+      viewDetail: "Buka detail",
+    },
+    books: {
+      manageTitle: "Manajemen Buku",
+      manageDesc: "Kelola rak digital minimal 25 judul.",
+      readOnlyTitle: "Koleksi Buku",
+      readOnlyDesc: "Telusuri koleksi yang dikurasi administrator.",
+      searchPlaceholder: "Cari buku...",
+      loading: "Memuat buku...",
+      error: "Terjadi kesalahan saat memuat buku.",
+      noResultsTitle: "Tidak ada buku",
+      noResultsBody: "Coba kata kunci lain atau kosongkan pencarian.",
+      noCatalogue:
+        "Belum ada buku yang tersimpan — slot cadangan akan muncul hingga 25 entri.",
+      visitSource: "Kunjungi sumber",
+      viewButton: "Lihat",
+      editButton: "Ubah",
+      deleteButton: "Hapus",
+      placeholderCopy: "Slot cadangan — tambahkan buku baru untuk mengisi.",
+    },
+    requestForm: {
+      title: "Ajukan Buku Baru",
+      description: "Kirim detail buku supaya admin bisa menambahkannya.",
+      cta: "Ajukan Buku",
+      labels: {
+        title: "Judul *",
+        authors: "Penulis",
+        externalLink: "Tautan Referensi",
+        reason: "Alasan Permintaan *",
+        notes: "Catatan Tambahan",
+      },
+      placeholders: {
+        title: "Judul atau seri",
+        authors: "Pisahkan dengan koma",
+        externalLink: "https://contoh.com/sumber",
+        reason: "Mengapa buku ini penting?",
+        notes: "Info lain seperti edisi, ISBN, dsb.",
+      },
+      submit: "Kirim Permintaan",
+      submitting: "Mengirim...",
+      cancel: "Batal",
+    },
+    requests: {
+      title: "Permintaan Buku",
+      description:
+        "Tinjau permintaan user dan ubah statusnya sebelum menambahkan ke katalog.",
+      emptyTitle: "Belum ada permintaan",
+      emptyBody:
+        "User dapat mengajukan buku lewat tombol Ajukan Buku di tab koleksi.",
+      filterLabel: "Status",
+      filters: {
+        all: "Semua",
+        pending: "Menunggu",
+        approved: "Disetujui",
+        rejected: "Ditolak",
+      },
+      table: {
+        requester: "Peminta",
+        title: "Judul",
+        reason: "Alasan",
+        submitted: "Diajukan",
+        status: "Status",
+        actions: "Aksi",
+      },
+      actions: {
+        approve: "Setujui",
+        reject: "Tolak",
+        revert: "Kembalikan",
+        delete: "Hapus",
+        convert: "Buka di Form Buku",
+      },
+      adminNotePlaceholder: "Catatan admin (opsional)",
+      statusLabel: {
+        pending: "Menunggu",
+        approved: "Disetujui",
+        rejected: "Ditolak",
+      },
+    },
+    users: {
+      title: "Kelola Akun",
+      description: "Tambah, ubah role, dan hapus akun yang terdaftar.",
+      createTitle: "Buat Pengguna",
+      createDesc: "Lengkapi data di bawah ini untuk menambah akun baru.",
+      nameLabel: "Nama",
+      emailLabel: "Email",
+      passwordLabel: "Kata sandi",
+      roleLabel: "Role",
+      saveButton: "Simpan Pengguna",
+      listTitle: "Daftar Pengguna",
+      listDesc: (total) => `Total ${total} akun terdaftar.`,
+      searchPlaceholder: "Cari nama atau email...",
+      actions: {
+        setUser: "Jadikan User",
+        setAdmin: "Jadikan Admin",
+        edit: "Ubah",
+        delete: "Hapus",
+      },
+      defaultAdminBadge: "Admin bawaan",
+      registeredBadge: "Terdaftar",
+    },
+    historyEntry: {
+      noCover: "Tidak ada sampul",
+      statusUnknown: "tidak diketahui",
+    },
+    modals: {
+      profile: {
+        title: "Ubah Profil",
+        name: "Nama",
+        email: "Email",
+        password: "Kata sandi",
+        passwordPlaceholder: "Biarkan kosong jika tidak berubah",
+        avatar: "URL Foto Profil",
+        avatarPlaceholder: "https://contoh.com/avatar.png",
+        bio: "Bio",
+        bioPlaceholder: "Ceritakan tentang dirimu...",
+        cancel: "Batal",
+        save: "Simpan Perubahan",
+      },
+      book: {
+        editTitle: "Ubah Buku",
+        addTitle: "Tambah Buku",
+        title: "Judul *",
+        authors: "Penulis *",
+        year: "Tahun Terbit",
+        status: "Status",
+        cover: "URL Sampul",
+        external: "Tautan Eksternal / Sumber",
+        description: "Deskripsi",
+        content: "Konten Membaca",
+        cancel: "Batal",
+        submitEdit: "Perbarui",
+        submitCreate: "Buat",
+      },
+      search: {
+        title: "Cari API Eksternal",
+        openLibrary: "Open Library",
+        gutendex: "Gutendex",
+        placeholder: "Cari buku...",
+        button: "Cari",
+        empty: "Hasil akan muncul di sini.",
+        openSource: "Buka sumber",
+        add: "Tambah ke Perpustakaan",
+        adding: "Menambahkan…",
+      },
+      detail: {
+        description: "Deskripsi",
+        content: "Konten Membaca",
+        viewSource: "Lihat sumber asli",
+        noCover: "Tidak ada sampul",
+      },
+    },
+    historyModal: {
+      clearSuccess: "Riwayat dibersihkan",
+    },
+    placeholders: {
+      unknownAuthor: "Penulis tidak diketahui",
+      unknownYear: "Tahun tidak diketahui",
+      noCover: "Tidak ada sampul",
+      reservedShelf: (index) => `Rak Cadangan #${index}`,
+    },
+    toast: {
+      logout: "Berhasil keluar",
+      loginSuccess: (name) => `Selamat datang, ${name}`,
+      accountCreated: "Akun berhasil dibuat",
+      profileRequired: "Nama dan email wajib diisi",
+      emailUsed: "Email sudah terpakai",
+      profileUpdated: "Profil diperbarui",
+      completeUserForm: "Lengkapi data pengguna",
+      emailExists: "Email sudah digunakan",
+      userAdded: "Pengguna baru ditambahkan",
+      defaultAdminLocked: "Role admin bawaan tidak bisa diubah",
+      userRoleUpdated: "Role pengguna diperbarui",
+      cannotDeleteDefaultAdmin: "Tidak bisa menghapus admin utama",
+      needOneAdmin: "Minimal harus ada satu admin aktif",
+      cannotDeleteActive: "Tidak bisa menghapus sesi aktif",
+      userDeleted: "Pengguna dihapus",
+      adminOnlyAdd: "Hanya admin yang bisa menambah buku",
+      adminOnlyEdit: "Hanya admin yang bisa mengubah buku",
+      titleRequired: "Judul wajib diisi",
+      bookUpdated: "Buku diperbarui",
+      bookCreated: "Buku ditambahkan",
+      bookDeleted: "Buku dihapus",
+      loginForSearch: "Masuk terlebih dahulu untuk memakai pencarian",
+      searchTerm: "Masukkan kata kunci",
+      importLogin: "Masuk terlebih dahulu untuk impor",
+      importMissingTitle: "Data eksternal tidak memiliki judul",
+      importSuccess: "Buku berhasil diimpor",
+      historyCleared: "Riwayat dibersihkan",
+      historyMissingBook: "Koleksi tidak tersedia lagi",
+      apiHealthy: "API sehat",
+      apiFailed: (message) => `Koneksi API gagal: ${message}`,
+      booksLoadFailed: (message) => `Gagal memuat buku: ${message}`,
+      bookLoadFailed: (message) => `Gagal memuat buku: ${message}`,
+      saveFailed: (message) => `Gagal menyimpan: ${message}`,
+      deleteFailed: (message) => `Gagal menghapus: ${message}`,
+      searchFailed: (message) => `Pencarian gagal: ${message}`,
+      importFailed: (message) => `Gagal impor: ${message}`,
+      requestSubmitSuccess: "Permintaan buku dikirim",
+      requestSubmitFailed: (message) => `Gagal mengirim permintaan: ${message}`,
+      requestStatusUpdated: "Status permintaan diperbarui",
+      requestDeleted: "Permintaan dihapus",
+      adminOnlyRequests: "Hanya admin yang bisa mengelola permintaan",
+      requestReasonRequired: "Jelaskan alasan permintaan",
+      requestLoginRequired: "Masuk terlebih dahulu untuk mengajukan buku",
+    },
+  },
+  en: {
+    nav: {
+      dashboard: "Dashboard",
+      users: "Users",
+      books: "Books",
+      history: "History",
+      requests: "Requests",
+    },
+    header: {
+      brand: "Digital Library",
+      title: "Monochrome Dashboard",
+      defaultCredentialHint: "Default admin · admin@library.local / admin123",
+      refresh: "Refresh",
+      languageToggle: "",
+      searchApi: "Search APIs",
+      editProfile: "Edit Profile",
+      logout: "Logout",
+    },
+    hero: {
+      kicker: "Digital Library",
+      heading: "A monochrome archive for distraction-free reading.",
+      body: "Sign in as admin to curate the catalogue and accounts, or as user to focus on reading and history tracking.",
+      statSlots: "Ready-to-fill slots",
+      statRoles: "Admin & User dashboard",
+      authLoginTitle: "Sign In",
+      authLoginDesc: "Use the available admin/user credentials.",
+      authRegisterTitle: "Create account",
+      authRegisterDesc: "Register a new user with basic access.",
+      nameLabel: "Full name",
+      emailLabel: "Email",
+      passwordLabel: "Password",
+      namePlaceholder: "Jane Doe",
+      emailPlaceholder: "you@example.com",
+      passwordPlaceholder: "••••••••",
+      loginButton: "Sign In",
+      registerButton: "Register",
+    },
+    profile: {
+      collectionLabel: "Active collection",
+      historyLabel: "History",
+      syncButton: "Sync books",
+    },
+    dashboardCommon: {
+      snapshot: "Snapshot as of",
+      bookStatus: "Book Status",
+      lastBook: "Last Book You Read",
+      continue: "Continue Reading",
+      unavailable: "Book unavailable in current catalogue.",
+      readingProgress: "Reading Progress",
+      progressHelper: "6-week rolling trend",
+      topAuthors: "Top Authors",
+      emptyAuthors: "No favorite authors yet.",
+    },
+    adminDashboard: {
+      cards: {
+        totalBooks: { title: "Total Books", helper: "Last sync" },
+        uniqueAuthors: { title: "Unique Authors", helper: "Curated catalogue" },
+        userAccounts: {
+          title: "User Accounts",
+          helper: (admins, members) => `Admin: ${admins} · Member: ${members}`,
+        },
+        serverStatus: { title: "Server Status" },
+      },
+      actionsTitle: "Actions",
+      actions: {
+        addBook: "Add New Book",
+        refreshList: "Refresh List",
+        searchExternal: "Search External APIs",
+        checkHealth: "Check API Health",
+      },
+      permissionsTitle: "Your Permissions",
+      apiSurfaceTitle: "API Surface",
+      overviewTitle: "Reading Overview",
+      curatorSpotlight: "Curator's Spotlight",
+      spotlightEmpty: "Add books to unlock personalized recommendations.",
+    },
+    userDashboard: {
+      totalBooksHelper: "Updated",
+      uniqueAuthorsHelper: "Library coverage",
+      readingActivity: "Reading Activity",
+      readingActivityHelper: "History tracks each book detail you open",
+      historyEmpty: "No reading history yet.",
+    },
+    history: {
+      title: "Reading History",
+      description: "Automatically tracks every book detail you open.",
+      entryCount: (count) => `${count} entries`,
+      clear: "Clear History",
+      emptyTitle: "No history yet",
+      emptyBody: "Open any book detail and it will appear here.",
+      viewDetail: "View detail",
+    },
+    books: {
+      manageTitle: "Book Management",
+      manageDesc: "Maintain a digital shelf with at least 25 titles.",
+      readOnlyTitle: "Book Collection",
+      readOnlyDesc: "Browse the catalogue curated by administrators.",
+      searchPlaceholder: "Search books...",
+      loading: "Loading books...",
+      error: "Failed to load books.",
+      noResultsTitle: "No books found",
+      noResultsBody: "Try another keyword or clear the search box.",
+      noCatalogue:
+        "No books saved yet — placeholder slots will appear until 25 entries.",
+      visitSource: "Visit source",
+      viewButton: "View",
+      editButton: "Edit",
+      deleteButton: "Delete",
+      placeholderCopy: "Reserved slot — add a new book to fill it.",
+    },
+    requestForm: {
+      title: "Request a Book",
+      description: "Share the details and an admin will review it.",
+      cta: "Request Book",
+      labels: {
+        title: "Title *",
+        authors: "Authors",
+        externalLink: "Reference Link",
+        reason: "Why should we add it? *",
+        notes: "Extra Notes",
+      },
+      placeholders: {
+        title: "Title or series",
+        authors: "Comma separated names",
+        externalLink: "https://example.com/source",
+        reason: "Give context for the request",
+        notes: "Edition, ISBN, or other details",
+      },
+      submit: "Send Request",
+      submitting: "Sending...",
+      cancel: "Cancel",
+    },
+    requests: {
+      title: "Book Requests",
+      description:
+        "Review submissions from readers and decide what enters the catalogue.",
+      emptyTitle: "No requests yet",
+      emptyBody: "Readers can submit requests from the collection tab.",
+      filterLabel: "Status",
+      filters: {
+        all: "All",
+        pending: "Pending",
+        approved: "Approved",
+        rejected: "Rejected",
+      },
+      table: {
+        requester: "Requester",
+        title: "Title",
+        reason: "Reason",
+        submitted: "Submitted",
+        status: "Status",
+        actions: "Actions",
+      },
+      actions: {
+        approve: "Approve",
+        reject: "Reject",
+        revert: "Reopen",
+        delete: "Delete",
+        convert: "Prefill Book Form",
+      },
+      adminNotePlaceholder: "Admin note (optional)",
+      statusLabel: {
+        pending: "Pending",
+        approved: "Approved",
+        rejected: "Rejected",
+      },
+    },
+    users: {
+      title: "Manage Accounts",
+      description: "Add, change roles, and delete registered users.",
+      createTitle: "Create User",
+      createDesc: "Complete the form below to add a new account.",
+      nameLabel: "Name",
+      emailLabel: "Email",
+      passwordLabel: "Password",
+      roleLabel: "Role",
+      saveButton: "Save User",
+      listTitle: "User List",
+      listDesc: (total) => `Total ${total} registered accounts.`,
+      searchPlaceholder: "Search name or email...",
+      actions: {
+        setUser: "Set User",
+        setAdmin: "Set Admin",
+        edit: "Edit",
+        delete: "Delete",
+      },
+      defaultAdminBadge: "Default Admin",
+      registeredBadge: "Registered",
+    },
+    historyEntry: {
+      noCover: "No cover",
+      statusUnknown: "unknown",
+    },
+    modals: {
+      profile: {
+        title: "Edit Profile",
+        name: "Name",
+        email: "Email",
+        password: "Password",
+        passwordPlaceholder: "Leave blank to keep current password",
+        avatar: "Profile Photo URL",
+        avatarPlaceholder: "https://example.com/avatar.png",
+        bio: "Bio",
+        bioPlaceholder: "Tell the library who you are...",
+        cancel: "Cancel",
+        save: "Save Changes",
+      },
+      book: {
+        editTitle: "Edit Book",
+        addTitle: "Add New Book",
+        title: "Title *",
+        authors: "Authors *",
+        year: "Publication Year",
+        status: "Status",
+        cover: "Cover Image URL",
+        external: "External Link / Source",
+        description: "Description",
+        content: "Reading Content",
+        cancel: "Cancel",
+        submitEdit: "Update",
+        submitCreate: "Create",
+      },
+      search: {
+        title: "Search External APIs",
+        openLibrary: "Open Library",
+        gutendex: "Gutendex",
+        placeholder: "Search books...",
+        button: "Search",
+        empty: "Results will appear here.",
+        openSource: "Open source",
+        add: "Add to Library",
+        adding: "Adding…",
+      },
+      detail: {
+        description: "Description",
+        content: "Reading Content",
+        viewSource: "View original source",
+        noCover: "No cover",
+      },
+    },
+    placeholders: {
+      unknownAuthor: "Unknown author",
+      unknownYear: "Unknown year",
+      noCover: "No cover",
+      reservedShelf: (index) => `Reserved Shelf #${index}`,
+    },
+    toast: {
+      logout: "You are logged out",
+      loginSuccess: (name) => `Welcome back, ${name}`,
+      accountCreated: "Account created as User",
+      profileRequired: "Name and email are required",
+      emailUsed: "Email already in use",
+      profileUpdated: "Profile updated",
+      completeUserForm: "Please complete user data",
+      emailExists: "Email already registered",
+      userAdded: "New user added",
+      defaultAdminLocked: "Default admin role cannot change",
+      userRoleUpdated: "User role updated",
+      cannotDeleteDefaultAdmin: "Cannot delete default admin",
+      needOneAdmin: "At least one admin must remain",
+      cannotDeleteActive: "Cannot delete active session",
+      userDeleted: "User deleted",
+      adminOnlyAdd: "Only admin can add books",
+      adminOnlyEdit: "Only admin can edit books",
+      titleRequired: "Title is required",
+      bookUpdated: "Book updated",
+      bookCreated: "Book created",
+      bookDeleted: "Book deleted",
+      loginForSearch: "Please login to use external search",
+      searchTerm: "Enter a search term",
+      importLogin: "Login first to import books",
+      importMissingTitle: "Missing title from external result",
+      importSuccess: "Book imported into library",
+      historyCleared: "History cleared",
+      historyMissingBook: "Collection no longer available",
+      apiHealthy: "API is healthy",
+      apiFailed: (message) => `API connection failed: ${message}`,
+      booksLoadFailed: (message) => `Failed to load books: ${message}`,
+      bookLoadFailed: (message) => `Failed to load book: ${message}`,
+      saveFailed: (message) => `Save failed: ${message}`,
+      deleteFailed: (message) => `Delete failed: ${message}`,
+      searchFailed: (message) => `Search failed: ${message}`,
+      importFailed: (message) => `Import failed: ${message}`,
+      requestSubmitSuccess: "Book request sent",
+      requestSubmitFailed: (message) => `Failed to submit request: ${message}`,
+      requestStatusUpdated: "Request status updated",
+      requestDeleted: "Request deleted",
+      adminOnlyRequests: "Only admins can manage requests",
+      requestReasonRequired: "Please share a reason",
+      requestLoginRequired: "Sign in to request a book",
+    },
+  },
 };
 
 const userPermissions = [
@@ -148,6 +764,11 @@ const getInitialHistory = (email) => {
   }
 };
 
+const getInitialLanguage = () => {
+  if (typeof window === "undefined") return "id";
+  return localStorage.getItem(LANGUAGE_STORAGE_KEY) || "id";
+};
+
 function App() {
   const initialAuthState = useMemo(() => getInitialAuthState(), []);
   const [users, setUsers] = useState(initialAuthState.users);
@@ -191,6 +812,7 @@ function App() {
   const [historyEntries, setHistoryEntries] = useState(() =>
     getInitialHistory(initialAuthState.currentUser?.email)
   );
+  const [language, setLanguage] = useState(() => getInitialLanguage());
   const [userAdminForm, setUserAdminForm] = useState(emptyUserAdminForm);
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [health, setHealth] = useState({ label: "Checking...", ok: false });
@@ -199,25 +821,35 @@ function App() {
     type: "success",
     visible: false,
   });
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [requestForm, setRequestForm] = useState(emptyRequestForm);
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const [requests, setRequests] = useState([]);
+  const [requestFilter, setRequestFilter] = useState("all");
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [requestError, setRequestError] = useState("");
+  const [requestNotes, setRequestNotes] = useState({});
   const toastTimer = useRef(null);
 
   const role = currentUser?.role || "Guest";
   const isAdmin = role === "Admin";
   const authToken = currentUser ? (isAdmin ? ADMIN_TOKEN : USER_TOKEN) : "";
+  const copy = translations[language] || translations.id;
   const navItems = useMemo(
     () =>
       isAdmin
         ? [
-            { id: "dashboard", label: "Dashboard" },
-            { id: "users", label: "User" },
-            { id: "books", label: "Buku" },
+            { id: "dashboard", label: copy.nav.dashboard },
+            { id: "users", label: copy.nav.users },
+            { id: "books", label: copy.nav.books },
+            { id: "requests", label: copy.nav.requests },
           ]
         : [
-            { id: "dashboard", label: "Dashboard" },
-            { id: "books", label: "Koleksi" },
-            { id: "history", label: "History" },
+            { id: "dashboard", label: copy.nav.dashboard },
+            { id: "books", label: copy.nav.books },
+            { id: "history", label: copy.nav.history },
           ],
-    [isAdmin]
+    [isAdmin, copy.nav]
   );
 
   useEffect(() => {
@@ -234,6 +866,11 @@ function App() {
       JSON.stringify({ users, currentUser })
     );
   }, [users, currentUser]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  }, [language]);
 
   const showToast = useCallback((message, type = "success") => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -253,7 +890,10 @@ function App() {
   const apiCall = useCallback(
     async (endpoint, { method = "GET", body } = {}) => {
       const headers = { "Content-Type": "application/json" };
-      if (authToken) headers["X-API-Token"] = authToken;
+      if (authToken) {
+        headers["X-API-Token"] = authToken;
+        headers["Authorization"] = `Bearer ${authToken}`;
+      }
 
       const options = { method, headers };
       if (body !== undefined) options.body = JSON.stringify(body);
@@ -300,23 +940,55 @@ function App() {
     } catch (err) {
       setBooks([]);
       setBooksError(err.message);
-      showToast(`Failed to load books: ${err.message}`, "error");
+      showToast(copy.toast.booksLoadFailed(err.message), "error");
     } finally {
       setLoadingBooks(false);
     }
-  }, [apiCall, showToast]);
+  }, [apiCall, showToast, copy.toast]);
+
+  const loadRequests = useCallback(async () => {
+    if (!isAdmin) {
+      setRequests([]);
+      setRequestNotes({});
+      return;
+    }
+
+    setLoadingRequests(true);
+    setRequestError("");
+    try {
+      const response = await apiCall("/requests");
+      const list = (
+        Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+          ? response.data
+          : []
+      ).sort((left, right) => (right.createdAt || 0) - (left.createdAt || 0));
+      setRequests(list);
+      const noteMap = list.reduce((acc, item) => {
+        acc[item.id] = item.adminNote || "";
+        return acc;
+      }, {});
+      setRequestNotes(noteMap);
+    } catch (err) {
+      setRequestError(err.message);
+      showToast(copy.toast.saveFailed(err.message), "error");
+    } finally {
+      setLoadingRequests(false);
+    }
+  }, [apiCall, isAdmin, showToast, copy.toast]);
 
   const checkHealth = useCallback(async () => {
     setHealth({ label: "Checking...", ok: false });
     try {
       await apiCall("/health");
       setHealth({ label: "Online", ok: true });
-      showToast("API is healthy", "success");
+      showToast(copy.toast.apiHealthy, "success");
     } catch (err) {
       setHealth({ label: "Offline", ok: false });
-      showToast(`API connection failed: ${err.message}`, "error");
+      showToast(copy.toast.apiFailed(err.message), "error");
     }
-  }, [apiCall, showToast]);
+  }, [apiCall, showToast, copy.toast]);
 
   useEffect(() => {
     checkHealth();
@@ -324,9 +996,14 @@ function App() {
   }, [checkHealth, loadBooks]);
 
   useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
+
+  useEffect(() => {
     if (!currentUser) {
       setSearchModalOpen(false);
       setBookModalOpen(false);
+      setRequestModalOpen(false);
     }
   }, [currentUser]);
 
@@ -482,6 +1159,11 @@ function App() {
     );
   }, [users, userSearchTerm]);
 
+  const filteredRequests = useMemo(() => {
+    if (requestFilter === "all") return requests;
+    return requests.filter((request) => request.status === requestFilter);
+  }, [requests, requestFilter]);
+
   const totalUsers = users.length;
   const totalAdmins = useMemo(
     () => users.filter((user) => user.role === "Admin").length,
@@ -497,7 +1179,15 @@ function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setAuthBanner("Logged out successfully");
-    showToast("You are logged out", "success");
+    showToast(copy.toast.logout, "success");
+  };
+
+  const toggleLanguage = (nextLanguage) => {
+    if (nextLanguage) {
+      setLanguage((prev) => (prev === nextLanguage ? prev : nextLanguage));
+      return;
+    }
+    setLanguage((prev) => (prev === "id" ? "en" : "id"));
   };
 
   const openProfileModal = () => {
@@ -536,7 +1226,7 @@ function App() {
       });
       setAuthBanner("");
       setAuthForm({ name: "", email: "", password: "" });
-      showToast(`Welcome back, ${match.name}`, "success");
+      showToast(copy.toast.loginSuccess(match.name), "success");
       return;
     }
 
@@ -567,7 +1257,7 @@ function App() {
       bio: newUser.bio,
     });
     setAuthForm({ name: "", email: "", password: "" });
-    showToast("Account created as User", "success");
+    showToast(copy.toast.accountCreated, "success");
   };
 
   const handleProfileSubmit = (event) => {
@@ -580,7 +1270,7 @@ function App() {
     const trimmedBio = profileForm.bio.trim();
 
     if (!trimmedName || !trimmedEmail) {
-      showToast("Name and email are required", "warning");
+      showToast(copy.toast.profileRequired, "warning");
       return;
     }
 
@@ -590,7 +1280,7 @@ function App() {
         user.email !== currentUser.email
     );
     if (emailTaken) {
-      showToast("Email already in use", "error");
+      showToast(copy.toast.emailUsed, "error");
       return;
     }
 
@@ -622,7 +1312,7 @@ function App() {
 
     setProfileForm((prev) => ({ ...prev, password: "" }));
     setProfileModalOpen(false);
-    showToast("Profile updated", "success");
+    showToast(copy.toast.profileUpdated, "success");
   };
 
   const handleAdminUserCreate = (event) => {
@@ -631,11 +1321,11 @@ function App() {
     const trimmedEmail = userAdminForm.email.trim().toLowerCase();
     const trimmedPassword = userAdminForm.password.trim();
     if (!trimmedName || !trimmedEmail || !trimmedPassword) {
-      showToast("Lengkapi data pengguna", "warning");
+      showToast(copy.toast.completeUserForm, "warning");
       return;
     }
     if (users.some((user) => user.email.toLowerCase() === trimmedEmail)) {
-      showToast("Email sudah digunakan", "error");
+      showToast(copy.toast.emailExists, "error");
       return;
     }
     const roleToAssign = userAdminForm.role === "Admin" ? "Admin" : "User";
@@ -647,14 +1337,14 @@ function App() {
     });
     setUsers((prev) => [...prev, newUser]);
     setUserAdminForm(emptyUserAdminForm);
-    showToast("Pengguna baru ditambahkan", "success");
+    showToast(copy.toast.userAdded, "success");
   };
 
   const handleUserRoleToggle = (email) => {
     const target = users.find((user) => user.email === email);
     if (!target) return;
     if (target.email === DEFAULT_ADMIN.email) {
-      showToast("Role admin utama tidak bisa diubah", "warning");
+      showToast(copy.toast.defaultAdminLocked, "warning");
       return;
     }
     const nextRole = target.role === "Admin" ? "User" : "Admin";
@@ -666,32 +1356,32 @@ function App() {
     if (currentUser?.email === email) {
       setCurrentUser((prev) => (prev ? { ...prev, role: nextRole } : prev));
     }
-    showToast("Role pengguna diperbarui", "success");
+    showToast(copy.toast.userRoleUpdated, "success");
   };
 
   const handleUserDelete = (email) => {
     const target = users.find((user) => user.email === email);
     if (!target) return;
     if (target.email === DEFAULT_ADMIN.email) {
-      showToast("Tidak bisa menghapus admin utama", "warning");
+      showToast(copy.toast.cannotDeleteDefaultAdmin, "warning");
       return;
     }
     const adminCount = users.filter((user) => user.role === "Admin").length;
     if (target.role === "Admin" && adminCount <= 1) {
-      showToast("Minimal harus ada satu admin aktif", "warning");
+      showToast(copy.toast.needOneAdmin, "warning");
       return;
     }
     if (currentUser?.email === email) {
-      showToast("Tidak bisa menghapus sesi yang sedang aktif", "warning");
+      showToast(copy.toast.cannotDeleteActive, "warning");
       return;
     }
     setUsers((prev) => prev.filter((user) => user.email !== email));
-    showToast("Pengguna dihapus", "success");
+    showToast(copy.toast.userDeleted, "success");
   };
 
   const openCreateModal = () => {
     if (!isAdmin) {
-      showToast("Only admin can add books", "warning");
+      showToast(copy.toast.adminOnlyAdd, "warning");
       return;
     }
     setBookForm(emptyForm);
@@ -700,7 +1390,7 @@ function App() {
 
   const handleEditBook = async (bookId) => {
     if (!isAdmin) {
-      showToast("Only admin can edit books", "warning");
+      showToast(copy.toast.adminOnlyEdit, "warning");
       return;
     }
     try {
@@ -718,7 +1408,7 @@ function App() {
       });
       setBookModalOpen(true);
     } catch (err) {
-      showToast(`Failed to load book: ${err.message}`, "error");
+      showToast(copy.toast.bookLoadFailed(err.message), "error");
     }
   };
 
@@ -733,7 +1423,7 @@ function App() {
 
     const trimmedTitle = bookForm.title.trim();
     if (!trimmedTitle) {
-      showToast("Title is required", "warning");
+      showToast(copy.toast.titleRequired, "warning");
       return;
     }
 
@@ -759,15 +1449,15 @@ function App() {
           method: "PUT",
           body: payload,
         });
-        showToast("Book updated", "success");
+        showToast(copy.toast.bookUpdated, "success");
       } else {
         await apiCall("/books", { method: "POST", body: payload });
-        showToast("Book created", "success");
+        showToast(copy.toast.bookCreated, "success");
       }
       closeBookModal();
       loadBooks();
     } catch (err) {
-      showToast(`Save failed: ${err.message}`, "error");
+      showToast(copy.toast.saveFailed(err.message), "error");
     }
   };
 
@@ -778,16 +1468,141 @@ function App() {
 
     try {
       await apiCall(`/books/${book.id}`, { method: "DELETE" });
-      showToast("Book deleted", "success");
+      showToast(copy.toast.bookDeleted, "success");
       loadBooks();
     } catch (err) {
-      showToast(`Delete failed: ${err.message}`, "error");
+      showToast(copy.toast.deleteFailed(err.message), "error");
     }
+  };
+
+  const openRequestModal = () => {
+    if (!currentUser) {
+      showToast(copy.toast.requestLoginRequired, "warning");
+      return;
+    }
+    setRequestForm(emptyRequestForm);
+    setRequestModalOpen(true);
+  };
+
+  const closeRequestModal = () => {
+    setRequestModalOpen(false);
+    setRequestForm(emptyRequestForm);
+  };
+
+  const handleRequestSubmit = async (event) => {
+    event.preventDefault();
+    if (!currentUser) {
+      showToast(copy.toast.requestLoginRequired, "warning");
+      return;
+    }
+
+    const title = requestForm.title.trim();
+    const reason = requestForm.reason.trim();
+    if (!title) {
+      showToast(copy.toast.titleRequired, "warning");
+      return;
+    }
+    if (!reason) {
+      showToast(copy.toast.requestReasonRequired, "warning");
+      return;
+    }
+
+    const authors = requestForm.authors
+      .split(",")
+      .map((author) => author.trim())
+      .filter(Boolean);
+
+    const payload = {
+      title,
+      authors,
+      reason,
+      additionalNotes: requestForm.notes.trim(),
+      externalLink: requestForm.externalLink.trim(),
+      requesterName: currentUser.name,
+      requesterEmail: currentUser.email,
+    };
+
+    setRequestSubmitting(true);
+    try {
+      await apiCall("/requests", { method: "POST", body: payload });
+      showToast(copy.toast.requestSubmitSuccess, "success");
+      setRequestForm(emptyRequestForm);
+      setRequestModalOpen(false);
+      if (isAdmin) loadRequests();
+    } catch (err) {
+      showToast(copy.toast.requestSubmitFailed(err.message), "error");
+    } finally {
+      setRequestSubmitting(false);
+    }
+  };
+
+  const handleRequestStatusChange = async (
+    requestId,
+    status,
+    adminNote = ""
+  ) => {
+    if (!isAdmin) {
+      showToast(copy.toast.adminOnlyRequests, "warning");
+      return;
+    }
+    try {
+      await apiCall(`/requests/${requestId}`, {
+        method: "PUT",
+        body: { status, adminNote },
+      });
+      showToast(copy.toast.requestStatusUpdated, "success");
+      loadRequests();
+    } catch (err) {
+      showToast(copy.toast.saveFailed(err.message), "error");
+    }
+  };
+
+  const handleRequestDelete = async (requestId, title) => {
+    if (!isAdmin) {
+      showToast(copy.toast.adminOnlyRequests, "warning");
+      return;
+    }
+    if (!window.confirm(`Delete request for "${title}"?`)) return;
+    try {
+      await apiCall(`/requests/${requestId}`, { method: "DELETE" });
+      showToast(copy.toast.requestDeleted, "success");
+      loadRequests();
+    } catch (err) {
+      showToast(copy.toast.deleteFailed(err.message), "error");
+    }
+  };
+
+  const handlePrefillBookFromRequest = (request) => {
+    if (!isAdmin) {
+      showToast(copy.toast.adminOnlyAdd, "warning");
+      return;
+    }
+    setBookForm({
+      id: "",
+      title: request.title || "",
+      authors: (request.authors || []).join(", "),
+      year: String(new Date().getFullYear()),
+      description: request.reason || request.additionalNotes || "",
+      coverImage: "",
+      externalLink: request.externalLink || "",
+      status: "available",
+      content: request.additionalNotes || "",
+    });
+    setBookModalOpen(true);
+    setActiveSection("books");
+  };
+
+  const handleRequestNoteChange = (requestId, value) => {
+    setRequestNotes((prev) => ({ ...prev, [requestId]: value }));
   };
 
   const openSearchModal = () => {
     if (!currentUser) {
-      showToast("Please login to use external search", "warning");
+      showToast(copy.toast.loginForSearch, "warning");
+      return;
+    }
+    if (!isAdmin) {
+      showToast(copy.toast.adminOnlyAdd, "warning");
       return;
     }
     setSearchModalOpen(true);
@@ -801,7 +1616,7 @@ function App() {
 
   const handleExternalSearch = async () => {
     if (!externalQuery.trim()) {
-      showToast("Enter a search term", "warning");
+      showToast(copy.toast.searchTerm, "warning");
       return;
     }
 
@@ -823,7 +1638,7 @@ function App() {
       const tagged = list.map((item) => ({ ...item, _source: externalApi }));
       setExternalResults(tagged);
     } catch (err) {
-      showToast(`Search failed: ${err.message}`, "error");
+      showToast(copy.toast.searchFailed(err.message), "error");
     } finally {
       setExternalLoading(false);
     }
@@ -926,13 +1741,17 @@ function App() {
 
   const importExternalBook = async (entry) => {
     if (!currentUser) {
-      showToast("Login first to import books", "warning");
+      showToast(copy.toast.importLogin, "warning");
+      return;
+    }
+    if (!isAdmin) {
+      showToast(copy.toast.adminOnlyAdd, "warning");
       return;
     }
 
     const payload = buildPayloadFromExternal(entry);
     if (!payload.title) {
-      showToast("Missing title from external result", "error");
+      showToast(copy.toast.importMissingTitle, "error");
       return;
     }
 
@@ -940,10 +1759,10 @@ function App() {
     setImportingExternalId(importId);
     try {
       await apiCall("/books", { method: "POST", body: payload });
-      showToast("Book imported into library", "success");
+      showToast(copy.toast.importSuccess, "success");
       loadBooks();
     } catch (err) {
-      showToast(`Import failed: ${err.message}`, "error");
+      showToast(copy.toast.importFailed(err.message), "error");
     } finally {
       setImportingExternalId("");
     }
@@ -977,8 +1796,8 @@ function App() {
     }
     localStorage.removeItem(getHistoryStorageKey(currentUser.email));
     setHistoryEntries([]);
-    showToast("History cleared", "success");
-  }, [currentUser, showToast]);
+    showToast(copy.toast.historyCleared, "success");
+  }, [currentUser, showToast, copy.toast]);
 
   const openDetailModal = (book) => {
     if (book?.placeholder) return;
@@ -995,10 +1814,15 @@ function App() {
     appendHistoryEntry(book);
   };
 
+  const closeDetailModal = () => {
+    setDetailModalOpen(false);
+    setActiveBook(null);
+  };
+
   const openHistoryEntry = (entry) => {
     const match = books.find((book) => String(book.id) === String(entry.id));
     if (!match) {
-      showToast("Koleksi tidak tersedia lagi", "warning");
+      showToast(copy.toast.historyMissingBook, "warning");
       return;
     }
     openDetailModal(match);
@@ -1657,14 +2481,24 @@ function App() {
                 : "Kelola rak digital minimal 25 judul."}
             </p>
           </div>
-          <div className="relative w-full md:w-72">
-            <input
-              type="text"
-              placeholder="Search books..."
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-72">
+              <input
+                type="text"
+                placeholder="Search books..."
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+            {readOnly && currentUser && (
+              <button
+                className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90"
+                onClick={openRequestModal}
+              >
+                {copy.requestForm.cta}
+              </button>
+            )}
           </div>
         </div>
 
@@ -1805,6 +2639,208 @@ function App() {
               ))}
             </div>
           </>
+        )}
+      </div>
+    );
+  };
+
+  const renderRequestsSection = () => {
+    const visibleRequests = filteredRequests;
+
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">
+              {copy.requests.title}
+            </h2>
+            <p className="text-muted-foreground">{copy.requests.description}</p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+            <select
+              value={requestFilter}
+              onChange={(event) => setRequestFilter(event.target.value)}
+              className="flex h-10 w-full sm:w-48 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="all">{copy.requests.filters.all}</option>
+              <option value="pending">{copy.requests.filters.pending}</option>
+              <option value="approved">{copy.requests.filters.approved}</option>
+              <option value="rejected">{copy.requests.filters.rejected}</option>
+            </select>
+            <button
+              className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+              onClick={loadRequests}
+              disabled={loadingRequests}
+            >
+              {loadingRequests ? copy.books.loading : copy.header.refresh}
+            </button>
+          </div>
+        </div>
+
+        {requestError && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {requestError}
+          </div>
+        )}
+
+        {loadingRequests ? (
+          <div className="text-center py-12 text-muted-foreground">
+            {copy.books.loading}
+          </div>
+        ) : visibleRequests.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border/70 bg-muted/20 p-10 text-center space-y-3">
+            <div className="text-4xl">📮</div>
+            <h3 className="text-lg font-semibold">
+              {copy.requests.emptyTitle}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {copy.requests.emptyBody}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {visibleRequests.map((request) => {
+              const noteValue =
+                requestNotes[request.id] ?? request.adminNote ?? "";
+              const statusLabel =
+                copy.requests.statusLabel[request.status] || request.status;
+              return (
+                <article
+                  key={request.id}
+                  className="rounded-xl border border-border bg-card text-card-foreground shadow-sm p-5 space-y-4"
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                        {copy.requests.table.requester}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {request.requesterName ||
+                          copy.placeholders.unknownAuthor}
+                        {request.requesterEmail && (
+                          <span className="text-xs text-muted-foreground/80 block">
+                            {request.requesterEmail}
+                          </span>
+                        )}
+                      </p>
+                      <h3 className="text-xl font-semibold leading-tight">
+                        {request.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {(request.authors || []).join(", ") ||
+                          copy.placeholders.unknownAuthor}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(request.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${requestStatusClasses(
+                          request.status
+                        )}`}
+                      >
+                        {statusLabel}
+                      </span>
+                      {request.externalLink && (
+                        <a
+                          href={request.externalLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-primary hover:underline"
+                        >
+                          {copy.books.visitSource} ↗
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div>
+                      <span className="font-semibold text-foreground block text-xs uppercase tracking-[0.2em]">
+                        {copy.requests.table.reason}
+                      </span>
+                      <p>{request.reason || "-"}</p>
+                    </div>
+                    {request.additionalNotes && (
+                      <div>
+                        <span className="font-semibold text-foreground block text-xs uppercase tracking-[0.2em]">
+                          {copy.requestForm.labels.notes}
+                        </span>
+                        <p>{request.additionalNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      {copy.requests.adminNotePlaceholder}
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={noteValue}
+                      onChange={(event) =>
+                        handleRequestNoteChange(request.id, event.target.value)
+                      }
+                      className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90"
+                      onClick={() =>
+                        handleRequestStatusChange(
+                          request.id,
+                          "approved",
+                          requestNotes[request.id] ?? request.adminNote ?? ""
+                        )
+                      }
+                    >
+                      {copy.requests.actions.approve}
+                    </button>
+                    <button
+                      className="inline-flex items-center justify-center rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                      onClick={() =>
+                        handleRequestStatusChange(
+                          request.id,
+                          "rejected",
+                          requestNotes[request.id] ?? request.adminNote ?? ""
+                        )
+                      }
+                    >
+                      {copy.requests.actions.reject}
+                    </button>
+                    {request.status !== "pending" && (
+                      <button
+                        className="inline-flex items-center justify-center rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                        onClick={() =>
+                          handleRequestStatusChange(
+                            request.id,
+                            "pending",
+                            requestNotes[request.id] ?? request.adminNote ?? ""
+                          )
+                        }
+                      >
+                        {copy.requests.actions.revert}
+                      </button>
+                    )}
+                    <button
+                      className="inline-flex items-center justify-center rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => handlePrefillBookFromRequest(request)}
+                    >
+                      {copy.requests.actions.convert}
+                    </button>
+                    <button
+                      className="inline-flex items-center justify-center rounded-md bg-destructive text-destructive-foreground px-4 py-2 text-sm font-medium hover:bg-destructive/90"
+                      onClick={() =>
+                        handleRequestDelete(request.id, request.title)
+                      }
+                    >
+                      {copy.requests.actions.delete}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         )}
       </div>
     );
@@ -2033,9 +3069,9 @@ function App() {
         <div className="container mx-auto px-4 md:px-6 py-4 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-              Digital Library
+              {copy.header.brand}
             </p>
-            <h1 className="text-2xl font-semibold">Monokrom Dashboard</h1>
+            <h1 className="text-2xl font-semibold">{copy.header.title}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div
@@ -2051,32 +3087,62 @@ function App() {
               className="text-xs text-muted-foreground hover:underline"
               onClick={checkHealth}
             >
-              Refresh
+              {copy.header.refresh}
             </button>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                {copy.header.languageToggle}
+              </span>
+              <div className="inline-flex rounded-full border border-border bg-background p-1 text-xs font-medium">
+                {LANGUAGE_OPTIONS.map((option) => {
+                  const active = language === option.value;
+                  return (
+                    <label
+                      key={option.value}
+                      className={`cursor-pointer rounded-full px-3 py-1 transition-colors ${
+                        active
+                          ? "bg-foreground text-background shadow-sm"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="language-toggle"
+                        value={option.value}
+                        className="sr-only"
+                        checked={active}
+                        onChange={() => toggleLanguage(option.value)}
+                      />
+                      {option.label}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
             {currentUser ? (
               <>
                 <button
                   className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
                   onClick={openSearchModal}
                 >
-                  Search API
+                  {copy.header.searchApi}
                 </button>
                 <button
                   className="inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-accent-foreground"
                   onClick={openProfileModal}
                 >
-                  Edit Profile
+                  {copy.header.editProfile}
                 </button>
                 <button
                   className="inline-flex items-center justify-center rounded-md bg-foreground text-background px-3 py-1.5 text-xs font-medium hover:bg-foreground/90"
                   onClick={handleLogout}
                 >
-                  Logout
+                  {copy.header.logout}
                 </button>
               </>
             ) : (
               <span className="text-xs text-muted-foreground">
-                Admin default · admin@library.local / admin123
+                {copy.header.defaultCredentialHint}
               </span>
             )}
           </div>
@@ -2152,6 +3218,9 @@ function App() {
               {activeSection === "dashboard" &&
                 (isAdmin ? renderAdminDashboard() : renderUserDashboard())}
               {isAdmin && activeSection === "users" && renderUsersSection()}
+              {isAdmin &&
+                activeSection === "requests" &&
+                renderRequestsSection()}
               {activeSection === "books" && renderBooksSection(!isAdmin)}
               {!isAdmin &&
                 activeSection === "history" &&
@@ -2298,6 +3367,138 @@ function App() {
                   className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
                 >
                   Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {requestModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
+          onClick={(e) => e.target === e.currentTarget && closeRequestModal()}
+        >
+          <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-lg sm:rounded-xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-semibold">
+                  {copy.requestForm.title}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {copy.requestForm.description}
+                </p>
+              </div>
+              <button
+                className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                onClick={closeRequestModal}
+              >
+                <span className="sr-only">Close</span>
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
+            <form onSubmit={handleRequestSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {copy.requestForm.labels.title}
+                </label>
+                <input
+                  type="text"
+                  value={requestForm.title}
+                  onChange={(event) =>
+                    setRequestForm((prev) => ({
+                      ...prev,
+                      title: event.target.value,
+                    }))
+                  }
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder={copy.requestForm.placeholders.title}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {copy.requestForm.labels.authors}
+                </label>
+                <input
+                  type="text"
+                  value={requestForm.authors}
+                  onChange={(event) =>
+                    setRequestForm((prev) => ({
+                      ...prev,
+                      authors: event.target.value,
+                    }))
+                  }
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder={copy.requestForm.placeholders.authors}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {copy.requestForm.labels.externalLink}
+                </label>
+                <input
+                  type="url"
+                  value={requestForm.externalLink}
+                  onChange={(event) =>
+                    setRequestForm((prev) => ({
+                      ...prev,
+                      externalLink: event.target.value,
+                    }))
+                  }
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder={copy.requestForm.placeholders.externalLink}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {copy.requestForm.labels.reason}
+                </label>
+                <textarea
+                  rows="3"
+                  value={requestForm.reason}
+                  onChange={(event) =>
+                    setRequestForm((prev) => ({
+                      ...prev,
+                      reason: event.target.value,
+                    }))
+                  }
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder={copy.requestForm.placeholders.reason}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {copy.requestForm.labels.notes}
+                </label>
+                <textarea
+                  rows="3"
+                  value={requestForm.notes}
+                  onChange={(event) =>
+                    setRequestForm((prev) => ({
+                      ...prev,
+                      notes: event.target.value,
+                    }))
+                  }
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder={copy.requestForm.placeholders.notes}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-md border border-input px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+                  onClick={closeRequestModal}
+                >
+                  {copy.requestForm.cancel}
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-70"
+                  disabled={requestSubmitting}
+                >
+                  {requestSubmitting
+                    ? copy.requestForm.submitting
+                    : copy.requestForm.submit}
                 </button>
               </div>
             </form>

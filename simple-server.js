@@ -8,7 +8,9 @@ const path = require('path')
 
 const cache = new NodeCache({ stdTTL: 300 }) // 5 minutes
 const BOOK_STORE = {}
+const BOOK_REQUESTS = {}
 let nextId = 1
+let nextRequestId = 1
 
 // Add sample books for demo
 BOOK_STORE['1'] = {
@@ -103,6 +105,21 @@ async function parseBody(req) {
       }
     })
   })
+}
+
+function normalizeAuthors(value) {
+  if (Array.isArray(value)) {
+    return value.map((author) => String(author).trim()).filter(Boolean)
+  }
+
+  if (typeof value === 'string') {
+    return value
+      .split(',')
+      .map((author) => author.trim())
+      .filter(Boolean)
+  }
+
+  return []
 }
 
 // Auth middleware
@@ -229,7 +246,7 @@ const server = http.createServer(async (req, res) => {
 
     // POST /books (requires auth)
     if (pathname === '/books' && method === 'POST') {
-      const auth = checkAuth(req, ['limited', 'all-access'])
+      const auth = checkAuth(req, ['all-access'])
       if (auth.error) return jsonResponse({ message: auth.error }, auth.status)
 
       const body = await parseBody(req)
@@ -243,7 +260,7 @@ const server = http.createServer(async (req, res) => {
 
     // PUT /books/:id (requires auth)
     if (pathname.match(/^\/books\/\w+$/) && method === 'PUT') {
-      const auth = checkAuth(req, ['limited', 'all-access'])
+      const auth = checkAuth(req, ['all-access'])
       if (auth.error) return jsonResponse({ message: auth.error }, auth.status)
 
       const id = pathname.split('/')[2]
@@ -265,6 +282,82 @@ const server = http.createServer(async (req, res) => {
       if (!book) return jsonResponse({ message: 'Book not found' }, 404)
 
       delete BOOK_STORE[id]
+      return jsonResponse({ message: 'Deleted' })
+    }
+
+    // GET /requests (admin only)
+    if (pathname === '/requests' && method === 'GET') {
+      const auth = checkAuth(req, ['all-access'])
+      if (auth.error) return jsonResponse({ message: auth.error }, auth.status)
+
+      const requests = Object.values(BOOK_REQUESTS).sort((a, b) => b.createdAt - a.createdAt)
+      return jsonResponse({ data: requests })
+    }
+
+    // POST /requests
+    if (pathname === '/requests' && method === 'POST') {
+      const auth = checkAuth(req, ['limited', 'all-access'])
+      if (auth.error) return jsonResponse({ message: auth.error }, auth.status)
+
+      const body = await parseBody(req)
+      const title = (body.title || '').trim()
+      if (!title) return jsonResponse({ message: 'title is required' }, 400)
+
+      const id = String(nextRequestId++)
+      const record = {
+        id,
+        title,
+        authors: normalizeAuthors(body.authors),
+        reason: (body.reason || '').trim(),
+        additionalNotes: (body.additionalNotes || '').trim(),
+        externalLink: (body.externalLink || '').trim(),
+        requesterName: (body.requesterName || auth.user.owner || 'unknown').trim(),
+        requesterEmail: (body.requesterEmail || '').trim(),
+        status: 'pending',
+        adminNote: '',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }
+
+      BOOK_REQUESTS[id] = record
+      return jsonResponse(record, 201)
+    }
+
+    // PUT /requests/:id (admin only)
+    if (pathname.match(/^\/requests\/\w+$/) && method === 'PUT') {
+      const auth = checkAuth(req, ['all-access'])
+      if (auth.error) return jsonResponse({ message: auth.error }, auth.status)
+
+      const id = pathname.split('/')[2]
+      const existing = BOOK_REQUESTS[id]
+      if (!existing) return jsonResponse({ message: 'Request not found' }, 404)
+
+      const body = await parseBody(req)
+      const validStatuses = ['pending', 'approved', 'rejected']
+      if (body.status && !validStatuses.includes(body.status)) {
+        return jsonResponse({ message: 'Invalid status value' }, 400)
+      }
+
+      BOOK_REQUESTS[id] = {
+        ...existing,
+        status: body.status || existing.status,
+        adminNote: body.adminNote !== undefined ? String(body.adminNote) : existing.adminNote,
+        updatedAt: Date.now(),
+      }
+
+      return jsonResponse(BOOK_REQUESTS[id])
+    }
+
+    // DELETE /requests/:id (admin only)
+    if (pathname.match(/^\/requests\/\w+$/) && method === 'DELETE') {
+      const auth = checkAuth(req, ['all-access'])
+      if (auth.error) return jsonResponse({ message: auth.error }, auth.status)
+
+      const id = pathname.split('/')[2]
+      const existing = BOOK_REQUESTS[id]
+      if (!existing) return jsonResponse({ message: 'Request not found' }, 404)
+
+      delete BOOK_REQUESTS[id]
       return jsonResponse({ message: 'Deleted' })
     }
 
