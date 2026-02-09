@@ -120,7 +120,7 @@ const translations = {
     },
     header: {
       brand: "Perpustakaan Digital",
-      title: "Dasbor Monokrom",
+      title: "Dasbor Utama",
       defaultCredentialHint: "Admin default · admin@library.local / admin123",
       refresh: "Segarkan",
       languageToggle: "",
@@ -130,7 +130,7 @@ const translations = {
     },
     hero: {
       kicker: "Perpustakaan Digital",
-      heading: "Arsip monokrom untuk membaca tanpa distraksi.",
+      heading: "Arsip untuk membaca tanpa distraksi.",
       body: "Masuk sebagai admin untuk mengkurasi koleksi dan akun, atau sebagai user untuk fokus membaca serta melacak riwayat.",
       statSlots: "Slot koleksi siap isi",
       statRoles: "Dashboard Admin & User",
@@ -807,10 +807,10 @@ function App() {
     bio: currentUser?.bio || "",
   });
   const [lastReadEntry, setLastReadEntry] = useState(() =>
-    getInitialLastRead()
+    getInitialLastRead(),
   );
   const [historyEntries, setHistoryEntries] = useState(() =>
-    getInitialHistory(initialAuthState.currentUser?.email)
+    getInitialHistory(initialAuthState.currentUser?.email),
   );
   const [language, setLanguage] = useState(() => getInitialLanguage());
   const [userAdminForm, setUserAdminForm] = useState(emptyUserAdminForm);
@@ -849,7 +849,7 @@ function App() {
             { id: "books", label: copy.nav.books },
             { id: "history", label: copy.nav.history },
           ],
-    [isAdmin, copy.nav]
+    [isAdmin, copy.nav],
   );
 
   useEffect(() => {
@@ -863,7 +863,7 @@ function App() {
     if (typeof window === "undefined") return;
     localStorage.setItem(
       AUTH_STORAGE_KEY,
-      JSON.stringify({ users, currentUser })
+      JSON.stringify({ users, currentUser }),
     );
   }, [users, currentUser]);
 
@@ -884,7 +884,7 @@ function App() {
     () => () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
     },
-    []
+    [],
   );
 
   const apiCall = useCallback(
@@ -923,7 +923,7 @@ function App() {
         throw new Error(err.message || "Network request failed");
       }
     },
-    [authToken]
+    [authToken],
   );
 
   const loadBooks = useCallback(async () => {
@@ -961,8 +961,8 @@ function App() {
         Array.isArray(response)
           ? response
           : Array.isArray(response?.data)
-          ? response.data
-          : []
+            ? response.data
+            : []
       ).sort((left, right) => (right.createdAt || 0) - (left.createdAt || 0));
       setRequests(list);
       const noteMap = list.reduce((acc, item) => {
@@ -1031,7 +1031,7 @@ function App() {
     if (typeof window === "undefined" || !currentUser?.email) return;
     localStorage.setItem(
       getHistoryStorageKey(currentUser.email),
-      JSON.stringify(historyEntries)
+      JSON.stringify(historyEntries),
     );
   }, [historyEntries, currentUser]);
 
@@ -1099,7 +1099,7 @@ function App() {
 
   const statusSummary = useMemo(() => {
     const available = books.filter(
-      (book) => book.status === "available"
+      (book) => book.status === "available",
     ).length;
     const unavailable = books.length - available;
     return {
@@ -1123,7 +1123,7 @@ function App() {
 
   const readingProgressPeak = useMemo(
     () => Math.max(...readingProgressPoints, 1),
-    [readingProgressPoints]
+    [readingProgressPoints],
   );
 
   const spotlightBook = useMemo(() => {
@@ -1155,7 +1155,7 @@ function App() {
     const keyword = userSearchTerm.trim().toLowerCase();
     if (!keyword) return users;
     return users.filter((user) =>
-      `${user.name} ${user.email} ${user.role}`.toLowerCase().includes(keyword)
+      `${user.name} ${user.email} ${user.role}`.toLowerCase().includes(keyword),
     );
   }, [users, userSearchTerm]);
 
@@ -1167,7 +1167,7 @@ function App() {
   const totalUsers = users.length;
   const totalAdmins = useMemo(
     () => users.filter((user) => user.role === "Admin").length,
-    [users]
+    [users],
   );
   const totalMembers = totalUsers - totalAdmins;
 
@@ -1277,7 +1277,7 @@ function App() {
     const emailTaken = users.some(
       (user) =>
         user.email.toLowerCase() === trimmedEmail &&
-        user.email !== currentUser.email
+        user.email !== currentUser.email,
     );
     if (emailTaken) {
       showToast(copy.toast.emailUsed, "error");
@@ -1299,7 +1299,7 @@ function App() {
           };
         }
         return user;
-      })
+      }),
     );
 
     setCurrentUser((prev) => ({
@@ -1350,8 +1350,8 @@ function App() {
     const nextRole = target.role === "Admin" ? "User" : "Admin";
     setUsers((prev) =>
       prev.map((user) =>
-        user.email === email ? { ...user, role: nextRole } : user
-      )
+        user.email === email ? { ...user, role: nextRole } : user,
+      ),
     );
     if (currentUser?.email === email) {
       setCurrentUser((prev) => (prev ? { ...prev, role: nextRole } : prev));
@@ -1539,7 +1539,7 @@ function App() {
   const handleRequestStatusChange = async (
     requestId,
     status,
-    adminNote = ""
+    adminNote = "",
   ) => {
     if (!isAdmin) {
       showToast(copy.toast.adminOnlyRequests, "warning");
@@ -1626,15 +1626,15 @@ function App() {
       const endpoint =
         externalApi === "openlibrary"
           ? `/external/openlibrary?q=${encodeURIComponent(
-              externalQuery.trim()
+              externalQuery.trim(),
             )}`
           : `/external/gutendex?q=${encodeURIComponent(externalQuery.trim())}`;
       const result = await apiCall(endpoint);
       const list = Array.isArray(result)
         ? result
         : Array.isArray(result?.data)
-        ? result.data
-        : [];
+          ? result.data
+          : [];
       const tagged = list.map((item) => ({ ...item, _source: externalApi }));
       setExternalResults(tagged);
     } catch (err) {
@@ -1705,8 +1705,8 @@ function App() {
     const coverImage = entry.cover_i
       ? `https://covers.openlibrary.org/b/id/${entry.cover_i}-L.jpg`
       : Array.isArray(entry.isbn) && entry.isbn.length > 0
-      ? `https://covers.openlibrary.org/b/isbn/${entry.isbn[0]}-L.jpg`
-      : "";
+        ? `https://covers.openlibrary.org/b/isbn/${entry.isbn[0]}-L.jpg`
+        : "";
     const firstSentence = Array.isArray(entry.first_sentence)
       ? entry.first_sentence[0]
       : entry.first_sentence;
@@ -1716,7 +1716,7 @@ function App() {
     const workKey =
       entry.key ||
       entry.seed?.find(
-        (item) => typeof item === "string" && item.startsWith("/works/")
+        (item) => typeof item === "string" && item.startsWith("/works/"),
       ) ||
       entry.seed?.[0];
     const externalLink = workKey ? `https://openlibrary.org${workKey}` : "";
@@ -1781,12 +1781,12 @@ function App() {
           timestamp: Date.now(),
         };
         const deduped = prev.filter(
-          (entry) => String(entry.id) !== String(baseEntry.id)
+          (entry) => String(entry.id) !== String(baseEntry.id),
         );
         return [baseEntry, ...deduped].slice(0, 40);
       });
     },
-    [currentUser]
+    [currentUser],
   );
 
   const clearHistory = useCallback(() => {
@@ -2053,7 +2053,7 @@ function App() {
                 <div className="flex items-end gap-2 h-16 w-full">
                   {readingProgressPoints.map((point, index) => {
                     const height = `${Math.round(
-                      (point / readingProgressPeak) * 100
+                      (point / readingProgressPeak) * 100,
                     )}%`;
                     return (
                       <div
@@ -2243,7 +2243,7 @@ function App() {
             <div className="flex items-end gap-2 h-16 w-full">
               {readingProgressPoints.map((point, index) => {
                 const height = `${Math.round(
-                  (point / readingProgressPeak) * 100
+                  (point / readingProgressPeak) * 100,
                 )}%`;
                 return (
                   <div
@@ -2550,7 +2550,7 @@ function App() {
                           event.currentTarget.parentElement?.classList.add(
                             "flex",
                             "items-center",
-                            "justify-center"
+                            "justify-center",
                           );
                           event.currentTarget.parentElement.innerHTML =
                             '<span class="text-muted-foreground text-sm">No cover available</span>';
@@ -2564,7 +2564,7 @@ function App() {
                     <div className="absolute top-2 right-2">
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset ${availabilityBadgeClasses(
-                          book.status
+                          book.status,
                         )}`}
                       >
                         {book.status || "unknown"}
@@ -2737,7 +2737,7 @@ function App() {
                     <div className="flex items-center gap-2">
                       <span
                         className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${requestStatusClasses(
-                          request.status
+                          request.status,
                         )}`}
                       >
                         {statusLabel}
@@ -2790,7 +2790,7 @@ function App() {
                         handleRequestStatusChange(
                           request.id,
                           "approved",
-                          requestNotes[request.id] ?? request.adminNote ?? ""
+                          requestNotes[request.id] ?? request.adminNote ?? "",
                         )
                       }
                     >
@@ -2802,7 +2802,7 @@ function App() {
                         handleRequestStatusChange(
                           request.id,
                           "rejected",
-                          requestNotes[request.id] ?? request.adminNote ?? ""
+                          requestNotes[request.id] ?? request.adminNote ?? "",
                         )
                       }
                     >
@@ -2815,7 +2815,7 @@ function App() {
                           handleRequestStatusChange(
                             request.id,
                             "pending",
-                            requestNotes[request.id] ?? request.adminNote ?? ""
+                            requestNotes[request.id] ?? request.adminNote ?? "",
                           )
                         }
                       >
@@ -3878,7 +3878,7 @@ function App() {
                       <div className="absolute top-2 right-2">
                         <span
                           className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ring-1 ring-inset ${availabilityBadgeClasses(
-                            activeBook.status
+                            activeBook.status,
                           )}`}
                         >
                           {activeBook.status || "unknown"}
@@ -3950,8 +3950,8 @@ function App() {
             toast.type === "success"
               ? "bg-neutral-100 border-neutral-200 text-neutral-800 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-100"
               : toast.type === "error"
-              ? "bg-neutral-900 border-neutral-700 text-neutral-50 dark:bg-neutral-100 dark:border-neutral-200 dark:text-neutral-900"
-              : "bg-background border-border text-foreground"
+                ? "bg-neutral-900 border-neutral-700 text-neutral-50 dark:bg-neutral-100 dark:border-neutral-200 dark:text-neutral-900"
+                : "bg-background border-border text-foreground"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -3959,8 +3959,8 @@ function App() {
               {toast.type === "success"
                 ? "✅"
                 : toast.type === "error"
-                ? "❌"
-                : "ℹ️"}
+                  ? "❌"
+                  : "ℹ️"}
             </span>
             <p className="text-sm font-medium">{toast.message}</p>
           </div>
